@@ -9,7 +9,15 @@ from streamlit_echarts import st_echarts
 import numpy as np
 from sklearn.metrics import confusion_matrix, precision_score, accuracy_score, recall_score
 
-
+# Agrega este bloque al inicio del archivo app.py
+st.markdown("""
+    <style>      
+        /* Sidebar */
+        section[data-testid="stSidebar"] {
+            background-color: #C96868;             
+        }        
+    </style>
+""", unsafe_allow_html=True)
 
 
 # Definimos la instancia
@@ -38,16 +46,12 @@ Naples, numeric_cols, text_cols, unique_categories_host, numeric_Naples = load_d
 
 ############# CREACIÓN DEL DASHBOARD Vista principal
 
-# Títulos principales
-# st.title("ᯓ ✈︎ Análisis de Datos")
-# st.header("Descubriendo Nápoles, Italia con datos de Airbnb")
-# st.subheader("Presentación de los datos")
-
 # Agregar imagen al sidebar (por ejemplo, un logotipo o imagen representativa)
-st.sidebar.image("Napoles.jpg", use_container_width=True)
+# st.sidebar.image("Napoles.jpg", use_container_width=True)
+st.sidebar.image("Naples.png", use_container_width=True)
 
 #Generamos los encabezados para la barra lateral (sidebar)
-st.sidebar.title("ᯓ ✈︎ Análisis de Datos Nápoles, Italia")
+st.sidebar.title("ᯓ ✈︎ Datos Nápoles, Italia")
 # st.sidebar.title("🔍 Menú")
 st.sidebar.subheader("Presentación de los datos")
 
@@ -67,7 +71,6 @@ if check_box:
 
 # Checkbox para mostrar etapas
 etapas_checkbox = st.sidebar.checkbox(label="📌 Mostrar Etapas del Análisis")
-
 
 # Si se activa el checkbox, mostramos el selectbox
 if etapas_checkbox:
@@ -241,95 +244,56 @@ if etapas_checkbox:
 
                 st.plotly_chart(fig_line)
 
-        # numerics_vars_selected= st.sidebar.multiselect(label="Variables graficadas", options= numeric_cols)
-        # category_selected= st.sidebar.selectbox(label= "Categorias", options= unique_categories_host)
-
-
     # Contenido de la Etapa II
     elif View == "Etapa II. Modelado predictivo":
         st.sidebar.title("🤖 Etapa II – Modelado Predictivo")
         st.sidebar.header("Predicción de tendencias y patrones")
 
-        
-        
         # Checkbox para mostrar HEATMAP
         heatmap = st.sidebar.checkbox(label="📌 Mostrar Heatmap de Napolés")
 
         if heatmap:
             st.subheader("༘ ⋆｡˚🔥 Mapa de calor de correlaciones entre variables numéricas")
 
+            st.sidebar.title("🔧 Panel de Control")
+            st.sidebar.header("Mapa de calor")
+
+            # Multiselect para seleccionar variables numéricas
             selected_vars = st.sidebar.multiselect(
                 "Selecciona las variables numéricas a incluir en el mapa de calor:",
                 options=numeric_cols,
                 default=list(numeric_cols)
+            )            
+
+            # Para seleccionar el rango de correlación a mostrar
+            min_corr, max_corr = st.slider(
+                "Rango de correlación a mostrar:",
+                min_value=-1.0,
+                max_value=1.0,
+                value=(-1.0, 1.0),
+                step=0.01
             )
 
-            if len(selected_vars) < 2:
-                st.warning("Selecciona al menos dos variables para generar el mapa de calor.")
-            else:
-                # Calcular matriz de correlación
-                corr_matrix = Naples[selected_vars].corr().fillna(0)
+            # Calcular matriz de correlación
+            corr_matrix = Naples[selected_vars].corr()
 
-                # Cálculo simétrico para que el 0 quede centrado
-                zmin = float(corr_matrix.replace(1.0, np.nan).min().min())
-                zmax = float(corr_matrix.replace(1.0, np.nan).max().max())
+            # Enmascarar valores fuera del rango seleccionado
+            filtered_corr = corr_matrix.mask(
+                (corr_matrix < min_corr) | (corr_matrix > max_corr)
+            )
 
+            # Crear mapa de calor con valores filtrados
+            fig_heatmap = px.imshow(
+                filtered_corr,
+                text_auto=".2f",
+                color_continuous_scale='RdBu_r',
+                zmin=-1, zmax=1,
+                # title="Mapa de Calor de Correlación (Filtrado por Rango)",
+                width=800,
+                height=600
+            )
             
-                # Preparar los datos para el heatmap
-                data = []
-                for i, row_var in enumerate(selected_vars):
-                    for j, col_var in enumerate(selected_vars):
-                        value = round(corr_matrix.iloc[i, j], 2)
-                        data.append([j, i, value if i != j else "-"])  # "-" en la diagonal (opcional)
-
-                # Crear el option para ECharts
-                option = {
-                    "tooltip": {"position": "top"},
-                    "grid": {"height": "60%", "top": "10%"},
-                    "xAxis": {
-                        "type": "category",
-                        "data": selected_vars,
-                        "splitArea": {"show": True}
-                    },
-                    "yAxis": {
-                        "type": "category",
-                        "data": selected_vars,
-                        "splitArea": {"show": True}
-                    },
-                    "visualMap": {
-                        "min": zmin,
-                        "max": zmax,
-                        "calculable": True,
-                        "orient": "horizontal",
-                        "left": "center",
-                        "bottom": "5%",
-                        "inRange": {
-                            "color": [                            
-                                # "#053061", "#195696", "#2F79B5", "#4E9AC6", "#86BDDA","#B6D7E8","#DBEAF2",                                 
-                                "#053061", "#195696", "#2F79B5", "#4E9AC6","#86BDDA",
-                                "#f7f7f7",  # ← neutro para 0
-                                "#EF9B7A", "#DA6954", "#C13639", "#9C1127", "#67001F" 
-                                # "#FBE3D4", "#F9C3A9", "#EF9B7A", "#DA6954", "#C13639", "#9C1127", "#67001F"                                
-                            ]
-                        }
-                    },
-                    "series": [
-                        {
-                            "name": "Correlación",
-                            "type": "heatmap",
-                            "data": data,
-                            "label": {"show": True},
-                            "emphasis": {
-                                "itemStyle": {
-                                    "shadowBlur": 10,
-                                    "shadowColor": "rgba(0, 0, 0, 0.5)"
-                                }
-                            },
-                        }
-                    ],
-                }
-
-                st_echarts(option, height="500px")
+            st.plotly_chart(fig_heatmap)
 
         st.sidebar.subheader("Tipo de Regresión")
         tipo_regresion = st.sidebar.selectbox(
@@ -338,22 +302,19 @@ if etapas_checkbox:
                 "Regresión Lineal Simple", 
                 "Regresión Lineal Múltiple", 
                 "Regresión Logística",
-                "Mapa de calor de correlaciones",
             ]
         )
 
-        # Selección de variables
         if tipo_regresion == "Regresión Lineal Simple":
-            # Sidebar informativo
             st.sidebar.header("🔧 Panel de Control")
             st.sidebar.subheader("Variables para regresión lineal simple")
 
-            #Menus desplegables de opciones de la variables seleccionadas
             x_var = st.sidebar.selectbox("Variable independiente (X):", options=numeric_cols)
             y_var = st.sidebar.selectbox("Variable dependiente (Y):", options=numeric_cols)
 
             from sklearn.linear_model import LinearRegression
-            from sklearn.model_selection import train_test_split
+            from sklearn.metrics import r2_score
+            from scipy.stats import pearsonr
 
             X = Naples[[x_var]]
             y = Naples[y_var]
@@ -361,93 +322,96 @@ if etapas_checkbox:
             model.fit(X, y)
             y_pred = model.predict(X)
 
-            st.subheader(f"˚.*☁️ Regresión Lineal Simple: {y_var} vs {x_var}")
-            st.write(f"**Coeficiente:** {model.coef_[0]:.4f}")
-            st.write(f"**Intercepto:** {model.intercept_:.4f}")
+            r2 = r2_score(y, y_pred)
+            r, _ = pearsonr(Naples[x_var], Naples[y_var])
 
-            fig = px.scatter(x=Naples[x_var], y=Naples[y_var], labels={'x': x_var, 'y': y_var})
-            fig.add_scatter(x=Naples[x_var], y=y_pred, mode='lines', name='Línea de regresión')
+            st.subheader(f"˚.*☁️ Regresión Lineal Simple: {y_var} vs {x_var}")
+
+            # Mostrar métricas en una tabla
+            st.write("**📈 Coeficientes:**")
+            resultados_df = pd.DataFrame({
+                "Métrica": ["Coeficiente de Determinación (R²)", "Coeficiente de Correlación (r)"],
+                "Valor": [f"{r2:.4f}", f"{r:.4f}"]
+            })
+
+            st.table(resultados_df)
+
+            # Visualización con línea de regresión
+            fig = px.scatter(
+                x=Naples[x_var],
+                y=Naples[y_var],
+                labels={'x': x_var, 'y': y_var}
+            )
+
+            fig.add_scatter(
+                x=Naples[x_var],
+                y=y_pred,
+                mode='lines',
+                name='Línea de regresión',
+                line=dict(color='#C96868')  # Cambia el color
+            )
+
             st.plotly_chart(fig)
         
         elif tipo_regresion == "Regresión Lineal Múltiple":
             st.sidebar.header("🔧 Panel de Control")
             st.sidebar.subheader("Variables para regresión lineal múltiple")
 
-            # Selección de variables independientes (X)
             x_vars = st.sidebar.multiselect("Variables independientes (X):", options=numeric_cols)
-
-            # Selección de variable dependiente (Y)
             y_var = st.sidebar.selectbox("Variable dependiente (Y):", options=numeric_cols)
 
-            if st.sidebar.button("📊 Realizar Regresión"):
-                if not x_vars:
-                    st.warning("Selecciona al menos una variable independiente.")
-                else:
-                    # Datos
-                    X = Naples[x_vars]
-                    y = Naples[y_var]
+            if x_vars and y_var:
+                X = Naples[x_vars]
+                y = Naples[y_var]
 
-                    # Entrenar modelo
-                    model = LinearRegression()
-                    model.fit(X, y)
-                    y_pred = model.predict(X)
+                # Entrenar modelo
+                model = LinearRegression()
+                model.fit(X, y)
+                y_pred = model.predict(X)
 
-                    # Resultados
-                    st.subheader(f"˚.*☁️  Resultados de Regresión Lineal Múltiple para predecir '{y_var}'")
-                    # st.write("Coeficientes:", dict(zip(x_vars, model.coef_)))
-                    # st.write("Intercepto:", model.intercept_)
-                    # st.write("R² Score:", model.score(X, y))
-                    
-                    # Mostrar tabla de coeficientes
-                    coef_table = pd.DataFrame({
-                        "Variable": x_vars,
-                        "Coeficiente": model.coef_
-                    })
-                    st.write("**📈 Coeficientes del Modelo:**")
-                    st.dataframe(coef_table.style.format({"Coeficiente": "{:.4f}"}), use_container_width=True)
+                # Métricas
+                r2 = model.score(X, y)
+                r = np.sqrt(r2)
+            
+                st.subheader(f"˚.*☁️ Regresión Lineal Múltiple para predecir '{y_var}'")
 
-                    # Mostrar intercepto y R² score
-                    summary_table = pd.DataFrame({
-                        "Intercepto": [model.intercept_],
-                        "R² Score": [model.score(X, y)]
-                    })
-                    st.write("**📊 Resumen del Modelo:**")
-                    st.table(summary_table.style.format({"Intercepto": "{:.4f}", "R² Score": "{:.4f}"}))
-                    
+                st.write("**📈 Coeficientes del modelo:**")
+                coef_df = pd.DataFrame({
+                    "Variable": x_vars,
+                    "Coeficiente": model.coef_
+                })
+                st.dataframe(coef_df)
 
-                    # Gráfico real vs predicho
-                    # df_pred = pd.DataFrame({y_var: y, 'Predicción': y_pred})
-                    # fig_pred = px.scatter(df_pred, x=y_var, y='Predicción', title="Valor real vs predicho")
-                    # fig_pred.add_shape(
-                    #     type='line', x0=y.min(), y0=y.min(), x1=y.max(), y1=y.max(),
-                    #     line=dict(color='red', dash='dash')
-                    # )
-                    # st.plotly_chart(fig_pred)
+                st.write("**📊 Métricas del modelo:**")
+                st.table(pd.DataFrame({
+                    "Métrica": ["Coeficiente de Determinación (R²)", "Coeficiente de Correlación (r)"],
+                    "Valor": [f"{r2:.4f}", f"{r:.4f}"]
+                }))
 
-                    # Gráfico real vs predicho con colores personalizados
-                    df_pred = pd.DataFrame({y_var: y, 'Predicción': y_pred})
-                    fig_pred = px.scatter(
-                        df_pred,
-                        x=y_var,
-                        y='Predicción',
-                        title="Valor real vs. predicho",
-                        labels={y_var: "Valor Real", 'Predicción': "Valor Predicho"}, 
-                    )
+                # Preparar gráfico comparativo
+                Naples_temp = Naples.copy()
+                Naples_temp["Predicciones"] = y_pred
 
-                    # Personalizar color de los puntos
-                    fig_pred.update_traces(marker=dict(color='rgba(100, 149, 237, 0.8)', size=8))  # Azul con transparencia
+                eje_x = st.selectbox("Selecciona variable X para graficar:", options=x_vars)
 
-                    # Agregar línea de identidad (roja punteada)
-                    fig_pred.add_shape(
-                        type='line',
-                        x0=y.min(), y0=y.min(), x1=y.max(), y1=y.max(),
-                        line=dict(color='crimson', dash='dash'),
-                    )
+                st.subheader("📉 Comparación de valores reales vs. predichos")
+                fig = px.scatter(
+                    Naples_temp,
+                    x=eje_x,
+                    y=y_var,
+                    labels={'x': eje_x, 'y': y_var}
+                )
 
-                    # Mostrar gráfico
-                    st.plotly_chart(fig_pred)
+                fig.add_scatter(
+                    x=Naples_temp[eje_x],
+                    y=Naples_temp["Predicciones"],
+                    mode='markers',
+                    name='Valores predichos',
+                    marker=dict(color='Orange')
+                )
 
-        
+                st.plotly_chart(fig)
+
         elif tipo_regresion == "Regresión Logística":
             st.sidebar.subheader("Variables para regresión logística")
 
@@ -468,7 +432,6 @@ if etapas_checkbox:
             from sklearn.linear_model import LogisticRegression
             from sklearn.preprocessing import LabelEncoder
             import pandas as pd
-            # from sklearn.metrics import confusion_matrix, precision_score, accuracy_score, recall_score
 
             if x_vars and y_var:
                 # Codificar variable categórica
@@ -487,10 +450,6 @@ if etapas_checkbox:
                     "Variable": x_vars,
                     "Coeficiente": model.coef_[0]
                 })
-
-                # # Mostrar tabla de coeficientes
-                # st.write("**📈 Coeficientes del Modelo:**")
-                # st.dataframe(coef_data.style.format({"Coeficiente": "{:.4f}"}), use_container_width=True)
 
                 # Predicción
                 y_pred = model.predict(X)
@@ -520,47 +479,12 @@ if etapas_checkbox:
                 import seaborn as sns
                 import matplotlib.pyplot as plt
 
-                st.subheader("🔍 Matriz de Confusión (Heatmap)")
+                st.subheader("🔍 Matriz de Confusión")
                 fig, ax = plt.subplots()
                 sns.heatmap(conf_df, annot=True, fmt='d', cmap='Blues', ax=ax)
                 labels = ["True Neg","False Pos","False Neg","True Pos"]
                 ax.set_xlabel("Predicción")
                 ax.set_ylabel("Real")
                 st.pyplot(fig)
-
-
-                
-
-
-
-
-        elif tipo_regresion == "Mapa de calor de correlaciones":
-            st.sidebar.title("🔧 Panel de Control")
-            st.sidebar.header("Mapa de calor")
-
-            st.subheader("༘ ⋆｡˚🔥 Mapa de calor de correlaciones entre variables numéricas")
-
-            # Multiselect para seleccionar variables numéricas
-            selected_vars = st.sidebar.multiselect(
-                "Selecciona las variables numéricas a incluir en el mapa de calor:",
-                options=numeric_cols,
-                default=list(numeric_cols)
-            )
-
-            # Mostrar automáticamente el mapa de calor si hay al menos dos variables
-            if len(selected_vars) < 2:
-                st.warning("Selecciona al menos dos variables para generar el mapa de calor.")
-            else:
-                corr_matrix = Naples[selected_vars].corr()
-
-                fig_heatmap = px.imshow(
-                    corr_matrix,
-                    text_auto=".2f",
-                    color_continuous_scale='RdBu_r',
-                    title="Mapa de Calor de Correlación",
-                    width=800,  # Ancho en píxeles
-                    height=600  # Alto en píxeles
-                )
-                st.plotly_chart(fig_heatmap)
 
 
