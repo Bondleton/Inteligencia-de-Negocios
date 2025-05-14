@@ -54,7 +54,7 @@ st.sidebar.subheader("Presentación de los datos")
 
 # Checkbox para mostrar dataset (para verificar que carga bien los datos)
 # check_box_Naples = st.sidebar.checkbox(label="📂 Mostrar Dataset Naples")
-check_box_Mexico = st.sidebar.checkbox(label="📂 Mostrar Dataset México")
+# check_box_Mexico = st.sidebar.checkbox(label="📂 Mostrar Dataset México")
 
 # Condicional para que aparezca el dataframe
 # if check_box_Naples:
@@ -68,15 +68,15 @@ check_box_Mexico = st.sidebar.checkbox(label="📂 Mostrar Dataset México")
 #     st.write(Naples.describe())
 
 # Condicional para que aparezca el dataframe
-if check_box_Mexico:
-    st.header("📊 Dataset Completo")
-    st.write(Mexico)
+# if check_box_Mexico:
+#     st.header("📊 Dataset Completo")
+#     st.write(Mexico)
 
-    st.subheader("🔠 Columnas del Dataset")
-    st.write(Mexico.columns)
+#     st.subheader("🔠 Columnas del Dataset")
+#     st.write(Mexico.columns)
 
-    st.subheader("📈 Estadísticas Descriptivas")
-    st.write(Mexico.describe())
+#     st.subheader("📈 Estadísticas Descriptivas")
+#     st.write(Mexico.describe())
 
 # Checkbox para mostrar etapas
 etapas_checkbox = st.sidebar.checkbox(label="📌 Mostrar Etapas del Análisis")
