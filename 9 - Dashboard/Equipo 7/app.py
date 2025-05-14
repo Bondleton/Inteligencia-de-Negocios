@@ -196,45 +196,92 @@ if etapas_checkbox:
                         mejor_exactitud = mejor_pais_row["Exactitud"]
                         mejor_sensibilidad = mejor_pais_row["Sensibilidad"]
 
-                        # Mostrar tarjeta visual en Streamlit
-                        st.markdown(f"""
-                            <div style="
-                                background-color: #e6f9f0;
-                                padding: 20px;
-                                border-radius: 12px;
-                                border: 2px solid #34c38f;
-                                width: 420px;
-                                font-family: 'Segoe UI', sans-serif;
-                                box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
-                                margin-top: 20px;
-                                color: #1a202c;  /* Color del texto */
-                            ">
-                                <h3 style="color: #2f855a;">🏆 País con mejor desempeño general</h3>
-                                <p><strong>🌍 País:</strong> {mejor_pais}</p>
-                                <p><strong>📊 Promedio de métricas:</strong> {mejor_score:.2f}</p>
-                                <ul style="list-style-type: none; padding-left: 0;">
-                                    <li><strong>✔️ Precisión:</strong> {mejor_precision:.2f}</li>
-                                    <li><strong>✔️ Exactitud:</strong> {mejor_exactitud:.2f}</li>
-                                    <li><strong>✔️ Sensibilidad:</strong> {mejor_sensibilidad:.2f}</li>
-                                </ul>
-                            </div>
-                        """, unsafe_allow_html=True)
-
                         
-                        # st.subheader("📈 Comparación visual de métricas por país")
-                        melted_df = comparacion_df.melt(id_vars="País", var_name="Métrica", value_name="Valor")
-                        fig = px.bar(melted_df, 
-                                    x='País', 
-                                    y='Valor', 
-                                    color='Métrica', 
-                                    barmode='group',
-                                    title='Métricas de Regresión Logística por País')
-                        st.plotly_chart(fig, use_container_width=True)
 
-                        st.subheader("📊 Comparación entre países")
-                        st.dataframe(comparacion_df)    
+                        # Crear dos columnas: una para la tarjeta y otra para la gráfica
+                        col1, col2 = st.columns([1, 2])  # Puedes ajustar el ancho relativo
 
+                        with col1:
+                            # Tarjeta visual
+                            st.markdown(f"""
+                                <div style="
+                                    background-color: #e6f9f0;
+                                    padding: 20px;
+                                    border-radius: 12px;
+                                    border: 2px solid #34c38f;
+                                    font-family: 'Segoe UI', sans-serif;
+                                    box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
+                                    color: #1a202c;
+                                ">
+                                    <h3 style="color: #2f855a;">🏆 País con mejor desempeño general</h3>
+                                    <p><strong>🌍 País:</strong> {mejor_pais}</p>
+                                    <p><strong>📊 Promedio de métricas:</strong> {mejor_score:.2f}</p>
+                                    <ul style="list-style-type: none; padding-left: 0;">
+                                        <li><strong>✔️ Precisión:</strong> {mejor_precision:.2f}</li>
+                                        <li><strong>✔️ Exactitud:</strong> {mejor_exactitud:.2f}</li>
+                                        <li><strong>✔️ Sensibilidad:</strong> {mejor_sensibilidad:.2f}</li>
+                                    </ul>
+                                </div>
+                            """, unsafe_allow_html=True)
 
+                        with col2:
+                            # Gráfica
+                            melted_df = comparacion_df.melt(id_vars="País", var_name="Métrica", value_name="Valor")
+                            fig = px.bar(melted_df, 
+                                        x='País', 
+                                        y='Valor', 
+                                        color='Métrica', 
+                                        barmode='group',
+                                        title='Métricas de Regresión Logística por País')
+                            st.plotly_chart(fig, use_container_width=True)
+
+                        import itertools
+
+                        # 🔽 Crear lista para almacenar las figuras de cada país
+                        figuras = []
+
+                        for nombre, model, encoder, x_vars, y_encoded, y_pred in individuales:
+                            coef_data = pd.DataFrame({
+                                "Variable": x_vars,
+                                "Coeficiente": model.coef_[0]
+                            })
+
+                            conf_matrix = confusion_matrix(y_encoded, y_pred)
+                            conf_df = pd.DataFrame(conf_matrix,
+                                                index=[f"Real {label}" for label in encoder.classes_],
+                                                columns=[f"Predicho {label}" for label in encoder.classes_])
+
+                            # 🔹 Crear figura de la matriz de confusión
+                            fig, ax = plt.subplots()
+                            sns.heatmap(conf_df, annot=True, fmt='d', cmap='Blues', ax=ax)
+                            ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+                            ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+                            ax.set_title(f"Matriz de Confusión - {nombre}")
+                            ax.set_xlabel("Predicción")
+                            ax.set_ylabel("Real")
+
+                            # 🔹 Guardar la figura con su nombre y datos de coeficientes
+                            figuras.append((nombre, fig, coef_data, conf_df))
+
+                        # 🔽 Mostrar en 2 filas de 2 columnas
+                        iterator = iter(figuras)
+                        for _ in range(2):  # dos filas
+                            cols = st.columns(2)
+                            for col in cols:
+                                try:
+                                    nombre, fig, coef_data, conf_df = next(iterator)
+                                    with col:
+                                        st.markdown(f"### 🌍 Resultados para {nombre}")
+                                        # st.write("🔢 Coeficientes")
+                                        # st.dataframe(coef_data)
+                                        # st.write("🧩 Matriz de Confusión")
+                                        # st.dataframe(conf_df)
+                                        st.pyplot(fig)
+                                except StopIteration:
+                                    break
+
+                            
+    
                     # 🔽 Luego mostramos los detalles individuales por país
                     for nombre, model, encoder, x_vars, y_encoded, y_pred in individuales:
                         st.markdown(f"### 🌍 Resultados para {nombre}")
@@ -260,12 +307,3 @@ if etapas_checkbox:
                         st.pyplot(fig)
 
                         
-
-
-
-
-
-
-                    
-
-                    
