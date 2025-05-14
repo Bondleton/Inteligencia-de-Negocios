@@ -331,9 +331,9 @@ if etapas_checkbox:
             ]
         )
 
-        if tipo_regresion == "Regresión Lineal Simple":            
+        if tipo_regresion == "Regresión Lineal Múltiple":            
             st.sidebar.header("🔧 Panel de Control")
-            st.sidebar.subheader("Variables para regresión lineal simple")
+            st.sidebar.subheader("Variables para Regresión Lineal Múltiple")
 
             import pandas as pd
             import seaborn as sns
@@ -427,6 +427,82 @@ if etapas_checkbox:
 
             else:
                 st.warning("Selecciona una variable dependiente y al menos una independiente para ver los resultados.")
+
+        elif tipo_regresion == "Regresión Lineal Simple":
+            st.sidebar.subheader("Variables para regresión lineal simple")
+
+            # Solo se permiten variables que existan en todos los países
+            variables_comunes = list(
+                set(numeric_Naples.columns) &
+                set(numeric_Rio.columns) &
+                set(numeric_Berlin.columns) &
+                set(numeric_Mexico.columns)
+            )
+
+            x_var = st.sidebar.selectbox("Variable independiente (X):", options=variables_comunes)
+            y_var = st.sidebar.selectbox("Variable dependiente (Y):", options=variables_comunes)
+
+            if x_var and y_var:
+                st.subheader(f"📈 Comparación de regresión lineal simple entre países para: `{y_var}` vs `{x_var}`")
+
+                from sklearn.linear_model import LinearRegression
+                from sklearn.metrics import r2_score
+                from scipy.stats import pearsonr
+
+                resultados = []
+                graficas = []
+
+                for nombre, df in [("Naples", Naples), ("Rio", Rio), ("Berlin", Berlin), ("Mexico", Mexico)]:
+                    try:
+                        if all(var in df.columns for var in [x_var, y_var]):
+                            X = df[[x_var]]
+                            y = df[y_var]
+                            model = LinearRegression()
+                            model.fit(X, y)
+                            y_pred = model.predict(X)
+
+                            r2 = r2_score(y, y_pred)
+                            r, _ = pearsonr(df[x_var], df[y_var])
+                            coef = model.coef_[0]
+                            intercepto = model.intercept_
+
+                            resultados.append({
+                                "País": nombre,
+                                "Coeficiente (pendiente)": coef,
+                                "Intercepto": intercepto,
+                                "R²": r2,
+                                "r": r
+                            })
+
+                            # Guardar gráfica individual
+                            fig = px.scatter(x=X.squeeze(), y=y, labels={'x': x_var, 'y': y_var},
+                                            title=f"{nombre}: {y_var} vs {x_var}")
+                            fig.add_scatter(x=X.squeeze(), y=y_pred, mode='lines', name='Línea de regresión', line=dict(color='firebrick'))
+                            graficas.append((nombre, fig))
+
+                        else:
+                            st.warning(f"⚠️ Las variables seleccionadas no están disponibles en el dataset de {nombre}.")
+                    except Exception as e:
+                        st.error(f"❌ Error al procesar {nombre}: {e}")
+
+                if resultados:
+                    comparacion_df = pd.DataFrame(resultados)
+                    comparacion_df[["Coeficiente (pendiente)", "Intercepto", "R²", "r"]] = comparacion_df[["Coeficiente (pendiente)", "Intercepto", "R²", "r"]].applymap(lambda x: round(x, 4))
+
+                    st.markdown("### 📊 Comparación de métricas entre países")
+                    st.dataframe(comparacion_df)
+
+                    # Graficar métricas por país
+                    melted = comparacion_df.melt(id_vars="País", var_name="Métrica", value_name="Valor")
+                    fig_bar = px.bar(melted, x="País", y="Valor", color="Métrica", barmode="group", title="Métricas de Regresión Lineal Simple por País")
+                    st.plotly_chart(fig_bar, use_container_width=True)
+
+                    # Mostrar gráficas individuales
+                    st.markdown("## 📌 Gráficas individuales por país")
+                    for nombre, fig in graficas:
+                        st.markdown(f"### 🌍 {nombre}")
+                        st.plotly_chart(fig)
+
 
 
         elif tipo_regresion == "Regresión Logística":
