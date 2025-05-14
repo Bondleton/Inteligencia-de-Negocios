@@ -9,6 +9,12 @@ from streamlit_echarts import st_echarts
 import numpy as np
 from sklearn.metrics import confusion_matrix, precision_score, accuracy_score, recall_score
 
+# Configuración inicial
+st.set_page_config(layout="wide", page_title="Comparación entre países - Airbnb")
+
+# Aplicamos estilos con CSS
+
+
 # Definimos la instancia
 @st.cache_resource
 def load_data():
@@ -17,6 +23,12 @@ def load_data():
     Rio = pd.read_csv("Rio de Janeiro sin atipicos.csv")
     Berlin = pd.read_csv("Datos_limpios_Berlin.csv").drop(['Unnamed: 0'], axis=1)
     Mexico = pd.read_csv("México sin atipicos.csv").drop(['Unnamed: 0'], axis=1)
+
+    #Extracción de caracteristicas
+    Rio1 = pd.read_csv("Rio.csv")
+    Naples1 = pd.read_csv("Naples.csv")
+    Berlin1 = pd.read_csv("Berlin.csv")
+    Mexico1 = pd.read_csv("Mexico.csv")
 
     # Columnas numéricas
     numeric_Naples = Naples.select_dtypes(['float', 'int'])
@@ -34,14 +46,14 @@ def load_data():
     unique_categories_host = Naples['host_is_superhost'].unique()
 
     return (
-        Naples, Rio, Berlin, Mexico,
+        Naples, Rio, Berlin, Mexico, Naples1, Rio1, Berlin1, Mexico1,
         numeric_Naples, numeric_Rio, numeric_Berlin, numeric_Mexico,
         text_Naples, text_Rio, text_Berlin, text_Mexico,
         unique_categories_host
     )
 
 # Cargar datos  
-( Naples, Rio, Berlin, Mexico,
+( Naples, Rio, Berlin, Mexico, Naples1, Rio1, Berlin1, Mexico1,
 numeric_Naples, numeric_Rio, numeric_Berlin, numeric_Mexico,
 text_Naples, text_Rio, text_Berlin, text_Mexico,
 unique_categories_host) = load_data()
@@ -49,39 +61,20 @@ unique_categories_host) = load_data()
 ############# CREACIÓN DEL DASHBOARD Vista principal
 
 #Generamos los encabezados para la barra lateral (sidebar)
-st.sidebar.title("ᯓ ✈︎ Datos")
+st.sidebar.title("ᯓ ✈︎ Dashboard")
 st.sidebar.subheader("Presentación de los datos")
 
-# Checkbox para mostrar dataset (para verificar que carga bien los datos)
-# check_box_Naples = st.sidebar.checkbox(label="📂 Mostrar Dataset Naples")
-# check_box_Mexico = st.sidebar.checkbox(label="📂 Mostrar Dataset México")
+# Checkbox para mostrar info
+info = st.sidebar.checkbox(label="🍃 Mostrar Información")
 
-# Condicional para que aparezca el dataframe
-# if check_box_Naples:
-#     st.header("📊 Dataset Completo")
-#     st.write(Naples)
 
-#     st.subheader("🔠 Columnas del Dataset")
-#     st.write(Naples.columns)
-
-#     st.subheader("📈 Estadísticas Descriptivas")
-#     st.write(Naples.describe())
-
-# Condicional para que aparezca el dataframe
-# if check_box_Mexico:
-#     st.header("📊 Dataset Completo")
-#     st.write(Mexico)
-
-#     st.subheader("🔠 Columnas del Dataset")
-#     st.write(Mexico.columns)
-
-#     st.subheader("📈 Estadísticas Descriptivas")
-#     st.write(Mexico.describe())
+# Si se activa el checkbox, mostramos el selectbox
+if info:
+    st.sidebar.subheader("Paises")
+    st.image("Equipo 7.png", use_container_width=True)
 
 # Checkbox para mostrar etapas
 etapas_checkbox = st.sidebar.checkbox(label="📌 Mostrar Etapas del Análisis")
-
-# Si se activa el checkbox, mostramos el selectbox
 if etapas_checkbox:
     st.sidebar.subheader("Etapas")
     View = st.sidebar.selectbox(
@@ -94,6 +87,235 @@ if etapas_checkbox:
     if View == "Etapa I. Modelado explicativo":
         st.sidebar.title("🧠 Etapa I – Modelado Explicativo")
         st.sidebar.header("Exploración de características importantes de los datos")
+
+        import streamlit as st
+        import pandas as pd
+        import plotly.express as px
+        import seaborn as sns
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import pydeck as pdk
+
+        @st.cache_data
+        def load_data():
+            return {
+                "Rio1": pd.read_csv("Rio.csv"),
+                "Naples1": pd.read_csv("Naples.csv"),
+                "Berlin1": pd.read_csv("Berlin.csv"),
+                "Mexico1": pd.read_csv("Mexico.csv")
+            }
+
+        data = load_data()
+        colores = {
+            "Rio1": "green",
+            "Naples1": "gold",
+            "Berlin1": "black",
+            "Mexico1": "red"
+        }       
+
+        colores = {
+            "Rio1": "green",
+            "Naples1": "gold",
+            "Berlin1": "black",
+            "Mexico1": "red"
+        }
+
+        # Conversión de moneda a pesos mexicanos (MXN)
+        conversion_monedas = {
+            "Rio1": 3.5,   # BRL a MXN
+            "Naples1": 18.0,          # EUR a MXN
+            "Berlin1": 18.0,          # EUR a MXN
+            "Mexico1": 1.0            # Ya está en MXN
+        }
+
+        # Convertir columna 'price' en cada DataFrame
+        for ciudad, df in data.items():
+            df['price_mxn'] = pd.to_numeric(df['price'], errors='coerce') * conversion_monedas[ciudad]
+            df['price_mxn'] = df['price_mxn'].round(2)
+
+
+        # Variables clasificadas
+        variables_numericas = ['accommodates', 'bathrooms', 'bedrooms', 'beds']
+        variables_categoricas = ['host_response_time', 'host_verifications', 'room_type', 'property_type', 'host_acceptance_rate']
+        variables_scores = ['review_scores_rating', 'review_scores_accuracy', 'review_scores_cleanliness',
+                            'review_scores_checkin', 'review_scores_communication', 'review_scores_location',
+                            'review_scores_value']
+        variables_binarias = ['instant_bookable', 'has_availability', 'host_is_superhost', 'host_has_profile_pic',
+                            'host_identity_verified']
+        variable_precio=['price_mxn']
+        todas_las_variables = variables_numericas + variables_categoricas + variables_scores + variables_binarias + variable_precio
+
+        # Sidebar
+        st.sidebar.title("Panel de control")
+
+        # Variable a visualizar
+        selected_var = st.sidebar.selectbox("Selecciona una variable:", todas_las_variables)
+        show_table = st.sidebar.checkbox("Mostrar tabla")
+
+
+        # Tamaño de gráfico
+        st.sidebar.subheader("Tamaño del gráfico")
+        width = st.sidebar.slider("Ancho", 4, 20, 10)
+        height = st.sidebar.slider("Alto", 1, 15, 6)
+
+        # Título principal
+        st.title("Exploración Comparativa")
+
+
+        # Visualización según el tipo de variable
+        st.header(f"Visualización para: {selected_var}")
+
+        # Variables numéricas: diagrama de puntos
+        if selected_var in variables_numericas:
+            fig, ax = plt.subplots(figsize=(width, height))
+            for ciudad, df in data.items():
+                sns.stripplot(x=[ciudad]*len(df), y=df[selected_var], color=colores[ciudad], alpha=0.5, ax=ax)
+            ax.set_title(f"Distribución de {selected_var}")
+            st.pyplot(fig)
+
+
+        # Variables categóricas: barras por país en cuadrícula 2x2
+        elif selected_var in variables_categoricas:
+            
+            ciudades = list(data.keys())
+            
+            for i in range(0, len(ciudades), 2):
+                cols = st.columns(2)
+                for j, ciudad in enumerate(ciudades[i:i+2]):
+                    with cols[j]:
+                        df = data[ciudad]
+
+                        # Preprocesamiento específico para 'host_acceptance_rate'
+                        if selected_var == "host_acceptance_rate":
+                            df = df.dropna(subset=[selected_var])
+                            df['category'] = pd.qcut(df[selected_var], 5, duplicates='drop')
+                            counts = df['category'].value_counts().sort_index()
+                        else:
+                            counts = df[selected_var].value_counts().nlargest(5)
+
+                        fig, ax = plt.subplots(figsize=(5, 4))
+                        ax.bar(counts.index.astype(str), counts.values, color=colores[ciudad])
+                        ax.set_title(ciudad)
+                        ax.set_xlabel(selected_var)
+                        ax.set_ylabel("Frecuencia")
+                        plt.xticks(rotation=45)
+                        st.pyplot(fig)
+
+
+        # Scores: polígonos de frecuencia
+        elif selected_var in variables_scores:
+            fig, ax = plt.subplots(figsize=(width, height))
+            for ciudad, df in data.items():
+                sns.kdeplot(df[selected_var].dropna(), label=ciudad, color=colores[ciudad], ax=ax)
+            ax.set_title(f"Densidad de {selected_var}")
+            ax.legend()
+            st.pyplot(fig)
+
+        # Variables binarias: pastel por ciudad (en columnas)
+        elif selected_var in variables_binarias:
+
+            col1, col2 = st.columns(2)
+            ciudades = list(data.keys())
+
+            for i in range(0, len(ciudades), 2):
+                col_a = col1 if i % 4 == 0 else col2
+                col_b = col2 if i % 4 == 0 else col1
+
+                for col, ciudad in zip([col1, col2], ciudades[i:i+2]):
+                    with col:
+                        fig, ax = plt.subplots(figsize=(4, 4))  # Tamaño pequeño
+                        df = data[ciudad]
+                        df[selected_var] = df[selected_var].astype(str)
+                        df[selected_var].value_counts().plot.pie(autopct='%1.1f%%', colors=[colores[ciudad], 'lightgray'], ax=ax)
+                        ax.set_ylabel('')
+                        ax.set_title(ciudad)
+                        st.pyplot(fig)
+
+        #Precio
+        elif selected_var in variable_precio:
+            fig, axs = plt.subplots(2, 2, figsize=(width, height + 2))
+            fig.tight_layout(pad=10)
+            ciudades = list(data.keys())
+
+            for i, ciudad in enumerate(ciudades):
+                df = data[ciudad].dropna(subset=['price_mxn'])
+                df['precio_categoria'] = pd.qcut(df['price_mxn'], q=5, duplicates='drop')
+
+                conteo = df['precio_categoria'].value_counts().sort_index()
+
+                fila = i // 2
+                col = i % 2
+
+                axs[fila, col].bar(conteo.index.astype(str), conteo.values, color=colores[ciudad])
+                axs[fila, col].set_title(f"Categorías de precio en {ciudad}")
+                axs[fila, col].tick_params(axis='x', rotation=45)
+
+            st.pyplot(fig)
+
+            # ------------------ Mapa con control de intervalo de precios -------------------
+            st.subheader("Mapa interactivo de precios (MXN)")
+
+            ciudad_mapa = st.sidebar.selectbox("Selecciona una ciudad para el mapa", ciudades)
+            df_mapa = data[ciudad_mapa].dropna(subset=['latitude', 'longitude', 'price_mxn'])
+
+            if not df_mapa.empty:
+                precio_min, precio_max = int(df_mapa['price_mxn'].min()), int(df_mapa['price_mxn'].max())
+
+                rango = st.sidebar.slider(
+                    "Rango de precios a visualizar en el mapa (MXN)",
+                    min_value=precio_min,
+                    max_value=precio_max,
+                    value=(precio_min, precio_max)
+                )
+
+                df_filtrado = df_mapa[(df_mapa['price_mxn'] >= rango[0]) & (df_mapa['price_mxn'] <= rango[1])].copy()
+
+                if df_filtrado.empty:
+                    st.warning("No hay alojamientos en ese rango de precios.")
+                else:
+                    max_price = df_filtrado['price_mxn'].max()
+                    df_filtrado['color'] = df_filtrado['price_mxn'].apply(
+                        lambda x: [255, max(0, 255 - int((x / max_price) * 255)), 0]
+                    )
+
+                    st.pydeck_chart(pdk.Deck(
+                        initial_view_state=pdk.ViewState(
+                            latitude=df_filtrado["latitude"].mean(),
+                            longitude=df_filtrado["longitude"].mean(),
+                            zoom=11,
+                            pitch=45,
+                        ),
+                        layers=[
+                            pdk.Layer(
+                                "ScatterplotLayer",
+                                data=df_filtrado,
+                                get_position='[longitude, latitude]',
+                                get_color='color',
+                                get_radius=200,
+                                pickable=True
+                            ),
+                        ],
+                        tooltip={"text": "Precio: {price_mxn} MXN"}
+                    ))
+            else:
+                st.warning(f"No hay datos geográficos disponibles para {ciudad_mapa}.")
+
+
+        # Mostrar tabla resumen solo si se activa el checkbox
+        if show_table:
+            st.markdown("---")
+            st.subheader("Tabla resumen por país")
+
+            pais_seleccionado = st.sidebar.selectbox("Selecciona un país para ver su tabla", list(data.keys()))
+
+            df = data[pais_seleccionado]
+            resumen = df[selected_var].value_counts(dropna=False).reset_index()
+            resumen.columns = [selected_var, "Frecuencia"]
+
+            st.markdown(f"**{pais_seleccionado}**")
+            st.dataframe(resumen)
+
+
 
     elif View == "Etapa II. Modelado predictivo":
         st.sidebar.title("🤖 Etapa II – Modelado Predictivo")
@@ -109,7 +331,105 @@ if etapas_checkbox:
             ]
         )
 
-        if tipo_regresion == "Regresión Logística":
+        if tipo_regresion == "Regresión Lineal Simple":            
+            st.sidebar.header("🔧 Panel de Control")
+            st.sidebar.subheader("Variables para regresión lineal simple")
+
+            import pandas as pd
+            import seaborn as sns
+            import matplotlib.pyplot as plt
+            from sklearn.linear_model import LinearRegression
+            from sklearn.metrics import mean_squared_error, r2_score
+            import numpy as np
+            import plotly.express as px
+            import plotly.graph_objects as go
+                        
+
+            # Interfaz Streamlit
+            st.title("Regresión Lineal Múltiple por Ciudad")
+            
+            # Cargar datos
+            data = load_data()
+            sample_df = data[0]  # Naples
+
+            data_dict = {
+                "Naples": data[0],
+                "Rio": data[1],
+                "Berlin": data[2],
+                "Mexico": data[3]
+            }
+
+            # Selección de variables
+            st.sidebar.header("Selecciona las variables")
+            numeric_cols = sample_df.select_dtypes(include=['float', 'int']).columns.tolist()
+
+            target = st.sidebar.selectbox("Selecciona la variable dependiente (Y)", numeric_cols)
+            features = st.sidebar.multiselect("Selecciona las variables independientes (X)", [col for col in numeric_cols if col != target])
+
+            # Verifica si se han seleccionado variables
+            if target and features:
+                
+
+                # Selección de la variable X para graficar antes del ciclo de las ciudades
+                eje_x = st.selectbox("Selecciona una variable X para graficar:", options=features,  key="variable_x")
+
+                for city, df in data_dict.items():
+                    st.subheader(f"📊 Resultados para {city}")
+                    df = df.dropna(subset=features + [target])
+                    X = df[features]
+                    y = df[target]
+
+                    model = LinearRegression()
+                    model.fit(X, y)
+                    y_pred = model.predict(X)
+
+                    # Gráficos de relación entre cada X e Y
+                    st.markdown("**Relación entre variables independientes y dependiente**")
+                    cols = st.columns(2)  # Máximo 2 gráficos por fila
+
+                    for i, feature in enumerate(features):
+                        with cols[i % 2]:
+                            fig, ax = plt.subplots(figsize=(5, 4))
+                            sns.scatterplot(x=df[feature], y=y, ax=ax, color="green")
+                            ax.set_title(f"{feature} vs {target}", fontsize=11)
+                            ax.set_xlabel(feature, fontsize=9)
+                            ax.set_ylabel(target, fontsize=9)
+                            plt.tight_layout()
+                            st.pyplot(fig)
+                        if (i + 1) % 2 == 0:
+                            cols = st.columns(2)  # Nueva fila después de cada 2
+
+                    # Métricas: R² y r
+                    r2 = r2_score(y, y_pred)
+                    r = np.corrcoef(y, y_pred)[0, 1]
+                    st.markdown(f"**Coeficiente de determinación (R²)**: {r2:.3f}")
+                    st.markdown(f"**Coeficiente de correlación (r)**: {r:.3f}")
+
+                    # Genera el gráfico comparativo con la variable X seleccionada
+                    st.subheader("📉 Comparación de valores reales vs. predichos")
+                    fig = px.scatter(
+                        df,
+                        x=eje_x,
+                        y=target,
+                        labels={'x': eje_x, 'y': target},
+                        title=f"Comparación de {eje_x} vs {target}"
+                    )
+
+                    fig.add_scatter(
+                        x=df[eje_x],
+                        y=y_pred,
+                        mode='markers',
+                        name='Valores predichos',
+                        marker=dict(color='Orange')
+                    )
+
+                    st.plotly_chart(fig)
+
+            else:
+                st.warning("Selecciona una variable dependiente y al menos una independiente para ver los resultados.")
+
+
+        elif tipo_regresion == "Regresión Logística":
             st.sidebar.subheader("Variables para regresión logística")
 
             # Seleccionar variables sobre todas las disponibles
