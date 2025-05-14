@@ -178,11 +178,11 @@ if etapas_checkbox:
 
                     # 🔼 MOSTRAR PRIMERO LA GRÁFICA Y LA TABLA
                     if resultados:
-                        st.subheader("📊 Comparación entre países")                        
+                        # st.subheader("📊 Comparación entre países")                        
                         comparacion_df = pd.DataFrame(resultados)
                         comparacion_df[["Precisión", "Exactitud", "Sensibilidad"]] = comparacion_df[["Precisión", "Exactitud", "Sensibilidad"]].applymap(lambda x: round(x, 4))
-                        st.dataframe(comparacion_df)
-
+                        # st.dataframe(comparacion_df)
+                        
                         # Calcular el promedio de métricas
                         comparacion_df["Promedio"] = comparacion_df[["Precisión", "Exactitud", "Sensibilidad"]].mean(axis=1)
 
@@ -220,7 +220,8 @@ if etapas_checkbox:
                             </div>
                         """, unsafe_allow_html=True)
 
-                        st.subheader("📈 Comparación visual de métricas por país")
+                        
+                        # st.subheader("📈 Comparación visual de métricas por país")
                         melted_df = comparacion_df.melt(id_vars="País", var_name="Métrica", value_name="Valor")
                         fig = px.bar(melted_df, 
                                     x='País', 
@@ -230,43 +231,8 @@ if etapas_checkbox:
                                     title='Métricas de Regresión Logística por País')
                         st.plotly_chart(fig, use_container_width=True)
 
-
-                        # Calcular el promedio de métricas
-                        comparacion_df["Promedio"] = comparacion_df[["Precisión", "Exactitud", "Sensibilidad"]].mean(axis=1)
-
-                        # Obtener el país con mejor desempeño general
-                        mejor_pais_row = comparacion_df.loc[comparacion_df["Promedio"].idxmax()]
-                        mejor_pais = mejor_pais_row["País"]
-                        mejor_score = mejor_pais_row["Promedio"]
-
-                        # Obtener métricas individuales
-                        mejor_precision = mejor_pais_row["Precisión"]
-                        mejor_exactitud = mejor_pais_row["Exactitud"]
-                        mejor_sensibilidad = mejor_pais_row["Sensibilidad"]
-
-                        # Mostrar tarjeta visual en Streamlit
-                        st.markdown(f"""
-                            <div style="
-                                background-color: #e6f9f0;
-                                padding: 20px;
-                                border-radius: 12px;
-                                border: 2px solid #34c38f;
-                                width: 420px;
-                                font-family: 'Segoe UI', sans-serif;
-                                box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
-                                margin-top: 20px;
-                                color: #1a202c;  /* Color del texto */
-                            ">
-                                <h3 style="color: #2f855a;">🏆 País con mejor desempeño general</h3>
-                                <p><strong>🌍 País:</strong> {mejor_pais}</p>
-                                <p><strong>📊 Promedio de métricas:</strong> {mejor_score:.2f}</p>
-                                <ul style="list-style-type: none; padding-left: 0;">
-                                    <li><strong>✔️ Precisión:</strong> {mejor_precision:.2f}</li>
-                                    <li><strong>✔️ Exactitud:</strong> {mejor_exactitud:.2f}</li>
-                                    <li><strong>✔️ Sensibilidad:</strong> {mejor_sensibilidad:.2f}</li>
-                                </ul>
-                            </div>
-                        """, unsafe_allow_html=True)
+                        st.subheader("📊 Comparación entre países")
+                        st.dataframe(comparacion_df)    
 
 
                     # 🔽 Luego mostramos los detalles individuales por país
